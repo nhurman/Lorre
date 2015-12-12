@@ -69,7 +69,6 @@ class GameRecorder:
             data = response.read()
             self._file.write_last_chunk_info(data)
             return json.loads(data.decode('utf-8'))
-        return None
 
     def _download_metadata(self):
         print("Downloading metadata")
@@ -80,7 +79,6 @@ class GameRecorder:
             metadata['clientBackFetchingFreq'] = 0
             self._file.write_metadata(json.dumps(metadata))
             return metadata
-        return None
 
     def _download_end_of_game_stats(self):
         print("Downloading end of game stats")
@@ -137,6 +135,7 @@ class GameRecorder:
             while current_chunk != info['chunkId']:
                 self._download_chunk(current_chunk)
                 current_chunk += 1
+
 
             # Now we caught up to live, get chunks / keyframes as the arrive
             current_keyframe = 0

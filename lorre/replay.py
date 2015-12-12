@@ -40,6 +40,13 @@ class ReplayFile:
             # Delete the files
             shutil.rmtree(self._root_path())
 
+    def is_finished(self):
+        return self._file_exists(self._end_of_game_stats_rel_path())
+
+    def is_partial(self):
+        chunks = [int(n) for n in self._list_dir(self._chunks_rel_dir())]
+        return max(chunks) > len(chunks)
+
     # --- Helper functions ---
     def _open_archive(self):
         if self._fp is None:
@@ -47,17 +54,54 @@ class ReplayFile:
             self._fp = tarfile.open(filename, 'r')
         return self._fp
 
+    def _list_dir(self, name):
+        try:
+            list = os.listdir(os.path.join(self._root_path(), name))
+            return list
+        except FileNotFoundError:
+            if os.sep == '\\':
+                name = name.replace(os.sep, '/')
+            fp = self._open_archive()
+            list = [n[len(name + '/'):] for n in fp.getnames() if n.startswith(name + '/')]
+            return list
+
+
+    def _file_exists(self, name):
+        try:
+            # Read from file
+            with open(os.path.join(self._root_path(), name), 'rb') as fp:
+                return True
+        except FileNotFoundError:
+            try:
+                # Read from archive
+                if os.sep == '\\':
+                    name = name.replace(os.sep, '/')
+                fp = self._open_archive()
+                member = self._fp.getmember(name)
+                return True
+            except FileNotFoundError:
+                return False
+            except KeyError:
+                return False
+
     def _read_file(self, name):
         try:
             # Read from file
             with open(os.path.join(self._root_path(), name), 'rb') as fp:
                 return fp.read()
         except FileNotFoundError:
-            # Read from archive
-            fp = self._open_archive()
-            member = self._fp.getmember(name)
-            data = self._fp.extractfile(member)
-            return data.read()
+            try:
+                # Read from archive
+                if os.sep == '\\':
+                    name = name.replace(os.sep, '/')
+                fp = self._open_archive()
+                member = self._fp.getmember(name)
+                data = self._fp.extractfile(member)
+                return data.read()
+            except FileNotFoundError:
+                raise FileNotFoundError
+            except KeyError:
+                raise FileNotFoundError
 
     def _write_file(self, name, data):
         if type(data) is str:
@@ -128,20 +172,20 @@ class ReplayFile:
         self._write_file(self._game_rel_path(), data)
 
     # --- Read ---
-    def read_chunk(self, chunk_id, data):
+    def read_chunk(self, chunk_id):
         return self._read_file(self._chunk_rel_path(chunk_id))
 
-    def read_keyframe(self, keyframe_id, data):
+    def read_keyframe(self, keyframe_id):
         return self._read_file(self._keyframe_rel_path(keyframe_id))
 
-    def read_metadata(self, data):
+    def read_metadata(self):
         return self._read_file(self._metadata_rel_path())
 
-    def read_end_of_game_stats(self, data):
+    def read_end_of_game_stats(self,):
         return self._read_file(self._end_of_game_stats_rel_path())
 
-    def read_last_chunk_info(self, data):
+    def read_last_chunk_info(self):
         return self._read_file(self._last_chunk_info_rel_path())
 
-    def read_game(self, data):
+    def read_game(self):
         return self._read_file(self._game_rel_path())

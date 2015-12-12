@@ -1,9 +1,9 @@
 import cassiopeia.riotapi
+from cassiopeia.type.api.exception import APIError
 from cassiopeia.type.core.common import LoadPolicy
 from lorre import recorder
 from lorre import server
 import time
-import sys
 
 if __name__ == '__main__':
     cassiopeia.riotapi.set_load_policy(LoadPolicy.lazy);
@@ -19,7 +19,7 @@ if __name__ == '__main__':
                 if summoner is None:
                     summoner = cassiopeia.riotapi.get_summoner_by_name(summoner_name)
                 game = summoner.current_game()
-            except cassiopeia.type.api.exception.APIError:
+            except APIError:
                 continue
         else:
             featured = cassiopeia.riotapi.get_featured_games()
