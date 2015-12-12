@@ -3,17 +3,21 @@ from cassiopeia.type.core.common import LoadPolicy
 from lorre import recorder
 from lorre import server
 import time
+import sys
 
-if __name__ == '_d_main__':
+if __name__ == '__main__':
     cassiopeia.riotapi.set_load_policy(LoadPolicy.lazy);
     cassiopeia.riotapi.set_region("EUW")
     cassiopeia.riotapi.set_api_key("")
 
+    summoner_name = 'I Haxa I'
+    summoner = None
+
     while True:
         if True:
-            summoner_name = 'I Haxa I'
-            summoner = cassiopeia.riotapi.get_summoner_by_name(summoner_name)
             try:
+                if summoner is None:
+                    summoner = cassiopeia.riotapi.get_summoner_by_name(summoner_name)
                 game = summoner.current_game()
             except cassiopeia.type.api.exception.APIError:
                 continue
@@ -22,8 +26,8 @@ if __name__ == '_d_main__':
             game = featured[0]
 
         if game is None:
-            print("Game not found, waiting 30s")
-            time.sleep(30)
+            print("Game not found, waiting 3 minutes")
+            time.sleep(180)
         else:
             rec = recorder.GameRecorder(game, recorder.Region.EUW)
             rec.download()
