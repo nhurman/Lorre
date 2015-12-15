@@ -1,3 +1,8 @@
 __pycache__
 *.pyc
-replays/
+backend/replays
+frontend/node_modules
+frontend/app/*.js
+frontend/app/*.js.map
+.idea
+*.iml
