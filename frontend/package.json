@@ -2,20 +2,35 @@
   "name": "lorre",
   "version": "0.0.1",
   "description": "LoL Tournaments management tool",
-  "scripts": {},
   "author": "Nicolas Hurman <me@nhurman.fr>",
   "license": "MIT",
   "dependencies": {
-    "systemjs": "~0.19.6",
     "es6-promise": "~3.0.2",
-    "zone.js": "~0.5.8",
+    "zone.js": "~0.5.10",
     "es6-shim": "~0.33.13",
     "reflect-metadata": "~0.1.2",
-    "rxjs": "~5.0.0-alpha.14",
-    "angular2": "~2.0.0-alpha.53"
+    "rxjs": "~5.0.0-beta.0",
+    "angular2": "~2.0.0-beta.0"
   },
   "devDependencies": {
-    "live-server": "~0.9.0",
-    "typescript": "~1.7.3"
+    "typescript": "~1.7.5",
+    "ts-loader": "~0.7.2",
+    "webpack": "~1.12.9",
+    "webpack-dev-server": "~1.14.0",
+    "raw-loader": "~0.5.1",
+    "json-loader": "~0.5.4",
+    "tslint": "~3.2.0",
+    "tslint-loader": "~2.1.0",
+    "rimraf": "~2.4.4"
+  },
+  "scripts": {
+    "clean": "rimraf node_modules && npm cache clean",
+    "clean-install": "npm run clean && npm install",
+    "clean-start": "npm run clean && npm start",
+    "watch": "webpack --watch --progress --profile --colors --display-error-details --display-cached",
+    "build": "webpack --progress --profile --colors --display-error-details --display-cached",
+    "build:prod": "webpack --progress --profile --colors --display-error-details --display-cached --optimize-occurence-order --optimize-minimize --optimize-dedupe",
+    "start": "webpack-dev-server --inline --progress --profile --colors --display-error-details --display-cached --port 8080",
+    "lint": "tsconfig-lint"
   }
 }
