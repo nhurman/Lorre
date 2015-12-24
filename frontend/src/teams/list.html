@@ -1,0 +1,8 @@
+<h3>Teams list</h3>
+
+<div *ngFor="#team of teams">
+	<h5>{{ team.name }} ({{ team.seed }})</h5>
+	<ul>
+		<li *ngFor="#player of team.players">{{ player.name }} [{{player.tier}} {{player.division}} {{player.points}} LP]</li>
+	</ul>
+</div>

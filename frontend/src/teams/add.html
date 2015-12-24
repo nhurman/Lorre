@@ -1,0 +1,6 @@
+<form (submit)="add(name.value, players.value)">
+	<label for="name">Name</label>
+	<input type="text" #name class="form-control" id="name" placeholder="Team name"/>
+	<textarea #players class="form-control" id="players"></textarea>
+	<button type="submit">Add</button>
+</form>

@@ -1,4 +1,4 @@
-import json
+import bson, bson.json_util as json
 from bottle import Bottle, request, response, abort, HTTPResponse
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
@@ -9,7 +9,8 @@ from cassiopeia.type.core.common import LoadPolicy
 db = MongoClient('mongodb://localhost').lorre
 api = Bottle()
 
-cassiopeia.riotapi.set_load_policy(LoadPolicy.lazy);
+cassiopeia.riotapi.print_calls(True)
+cassiopeia.riotapi.set_load_policy(LoadPolicy.lazy)
 cassiopeia.riotapi.set_region("EUW")
 cassiopeia.riotapi.set_api_key("")
 
@@ -19,7 +20,7 @@ def send_response(code, message=None):
     r.add_header('Access-Control-Allow-Origin', '*')
     r.set_header('Content-Type', 'application/json')
     if type(message) is str:
-        e = {"details": message}
+        e = {'error': message}
         r.body = json.dumps(e)
     elif type(message) is dict:
         r.body = json.dumps(message)
@@ -28,86 +29,174 @@ def send_response(code, message=None):
     return r
 
 
-@api.route('/rest/player', method='POST')
-def post_player():
+######### PLAYERS #########
+def calculate_score(tier, division, points):
+    tier_points = {
+        'BRONZE': 0,
+        'SILVER': 500,
+        'GOLD': 1000,
+        'PLATINUM': 1500,
+        'DIAMOND': 2000,
+        'MASTER': 2500,
+        'CHALLENGER': 2500
+    }
+    division_points = {
+        'V': 0,
+        'IV': 100,
+        'III': 200,
+        'II': 300,
+        'I': 400
+    }
+    score = tier_points[tier] + points
+    if tier not in ['MASTER', 'CHALLENGER']:
+        score += division_points[division]
+    return score
+
+
+######### TEAMS #########
+@api.route('/rest/team', method='GET')
+def get_team():
+    teams = list(db['team'].find())
+    return send_response(200, {'results': teams})
+
+
+@api.route('/rest/team', method='POST')
+def post_team():
     try:
         data = request.body.read().decode('utf-8')
-        p = json.loads(data)
-        summoner = cassiopeia.riotapi.get_summoner_by_name(p['name'])
-        player = {'_id': summoner.id, 'name': summoner.name}
-        try:
-            leagues = summoner.league_entries()
-            solo = [l for l in leagues if l.queue.value == 'RANKED_SOLO_5x5'][0]
-            player['tier'] = solo.tier.value
-            player['division'] = solo.entries[0].division.value
-            player['points'] = solo.entries[0].league_points
-        except (KeyError, IndexError, APIError):
-            pass
-        db['player'].insert_one(player)
-    except (ValueError, KeyError, TypeError, APIError):
-        return send_response(400)
-    except DuplicateKeyError:
-        return send_response(400, "Entity already exists")
-    return send_response(201, player)
+        o = json.loads(data)
+    except Exception:
+        return send_response(400, 'Invalid JSON')
+
+    try:
+        team = {'name': str(o['name']), 'players': [], 'seed': 0}
+    except KeyError:
+        return send_response(400, 'Missing parameters')
+
+    try:
+        summoners = cassiopeia.riotapi.get_summoners_by_name(o['players'])
+        if any(None is a for a in summoners):
+            raise FileNotFoundError
+    except (FileNotFoundError, APIError):
+        return send_response(400, 'Summoner not found')
+
+    try:
+        summoners_leagues = cassiopeia.riotapi.get_league_entries_by_summoner(summoners)
+        leagues = {}
+        for summoner_leagues in summoners_leagues:
+            for league in summoner_leagues:
+                if league.queue.value != 'RANKED_SOLO_5x5':
+                    continue
+                leagues[league.entries[0].summoner.id] = league
+                break
+
+        for summoner in summoners:
+            if summoner is None:
+                pass
+            player = {'_id': summoner.id, 'name': summoner.name}
+            try:
+                solo = leagues[summoner.id]
+                player['tier'] = solo.tier.value
+                player['division'] = solo.entries[0].division.value
+                player['points'] = solo.entries[0].league_points
+                team['seed'] += calculate_score(player['tier'], player['division'], player['points'])
+            except (KeyError, IndexError, APIError):
+                pass
+
+            team['players'].append(player)
+
+        team['seed'] = round(team['seed'] / len(team['players']))
+        _id = db['team'].insert_one(team).inserted_id
+    except (ValueError, KeyError, TypeError, AttributeError, APIError) as e:
+        raise e
+        return send_response(400, 'Invalid input')
+    return send_response(201, {'id': _id})
 
 
-@api.route('/rest/player', method='GET')
-def get_player():
-    return {'playerList': list(db['player'].find().sort('_id', 1))}
+######### GROUPS #########
+@api.route('/rest/group', method='GET')
+def get_group():
+    groups = list(db['group'].find())
+    for group in groups:
+        criteria = {'$or': [{'_id': i} for i in group['teams']]}
+        teams = list(db['team'].find(criteria, {'players': 0}))
+        # We want to keep the same order
+        for i in range(len(teams)):
+            id = group['teams'][i]
+            team = next(filter(lambda x: x['_id'] == id, teams))
+            group['teams'][i] = team
+    return send_response(200, {'results': groups})
 
 
-@api.route('/rest/seed', method='GET')
-def get_seed():
-    def calculate_score(tier, division, points):
-        tier_points = {
-            'BRONZE': 0,
-            'SILVER': 500,
-            'GOLD': 1000,
-            'PLATINUM': 1500,
-            'DIAMOND': 2000,
-            'MASTER': 2500,
-            'CHALLENGER': 2500
+def validate_group(o):
+    if len(o['teams']) == 0:
+        return send_response(400, 'The list of teams cannot be empty')
+    criteria = {'$or': [{'_id': i} for i in o['teams']]}
+    if db['team'].find(criteria).count() != len(o['teams']):
+        return send_response(400, 'Unknown team')
+    return None
+
+
+@api.route('/rest/group', method='POST')
+def post_group():
+    try:
+        data = request.body.read().decode('utf-8')
+        o = json.loads(data)
+    except Exception:
+        return send_response(400, 'Invalid JSON')
+
+    try:
+        r = validate_group(o)
+        if r is not None:
+            return r
+
+        teams = []
+        for t in o['teams']:
+            teams.append(bson.ObjectId(t))
+
+        group = {
+            'name': str(o['name']),
+            'teams': teams
         }
 
-        division_points = {
-            'V': 0,
-            'IV': 100,
-            'III': 200,
-            'II': 300,
-            'I': 400
-        }
-
-        score = tier_points[tier] + points
-        if tier not in ['MASTER', 'CHALLENGER']:
-            score += division_points[division]
-
-        return score
-
-    players = list(db['player'].find())
-    for p in players:
-        try:
-            p['_seed'] = calculate_score(p['tier'], p['division'], p['points'])
-        except KeyError:
-            p['_seed'] = 0
-    return send_response(200, {'playerList': players})
+        _id = db['group'].insert_one(group).inserted_id
+        return send_response(201, {'id': _id})
+    except (TypeError, KeyError):
+        return send_response(400, 'Invalid input')
 
 
-@api.route('/rest/match', method='GET')
-def get_matches():
-    team1 = {'_id': 1, 'name': 'Team1'}
-    team2 = {'_id': 2, '_name': 'Team2'}
-    match = [{'_id': 10, 'team1': team1, 'team2': team2, 'score1': 0, 'score2': 0, 'state': 'ongoing'}]
-    return {'matchList': match}
-    # m = db['match'].find()
-    # return m
+@api.route('/rest/groups', method='POST')
+def post_group():
+    try:
+        data = request.body.read().decode('utf-8')
+        g = json.loads(data)
+    except Exception:
+        return send_response(400, 'Invalid JSON')
 
+    try:
+        # Validate everything first
+        for o in g['groups']:
+            r = validate_group(o)
 
-@api.route('/rest/team', method='PUT')
-def put_team():
-    data = request.body.read().decode('utf-8')
-    team = json.loads(data)
-    db['team'].insert_one(team)
+            teams = []
+            for t in o['teams']:
+                teams.append(bson.ObjectId(t))
+            o['teams'] = teams
 
+            if r is not None:
+                return r
+
+        # Save everything if we got this far
+        ids = []
+        for o in g['groups']:
+            group = {
+                'name': o['name'],
+                'teams': o['teams']
+            }
+            ids.append(db['group'].insert_one(group).inserted_id)
+        return send_response(201, {'ids': ids})
+    except (TypeError, KeyError):
+        return send_response(400, 'Invalid input')
 
 """
 GET /matches/?filter={"ongoing":true}

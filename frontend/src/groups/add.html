@@ -1,0 +1,15 @@
+<form (submit)="add(name.value, groupTeams)">
+	<label for="name">Name</label>
+	<input type="text" #name class="form-control" id="name" placeholder="Group name"/>
+	<br/>
+	Teams (click to remove):
+	<ul>
+		<li *ngFor="#team of groupTeams" (click)="removeTeam(team)">{{ team.name }} ({{ team.seed }})</li>
+	</ul>
+	
+	Available teams (click to add):
+	<ul>
+		<li *ngFor="#team of teams" (click)="addTeam(team)">{{ team.name }} ({{ team.seed }})</li>
+	</ul>
+	<button type="submit">Add</button>
+</form>

@@ -1,0 +1,33 @@
+<h3>Generate groups</h3>
+
+<form (submit)="generate(size.value)">
+	<label for="size">Max Teams per group</label>
+	<input type="number" #size class="form-control" id="size" placeholder="Group size"/>
+	<button type="submit">Generate</button><br/>
+	Recommended sizes: <span *ngFor="#divisor of divisors">{{divisor}} </span>
+</form>
+
+<div *ngIf="groups.length &gt; 0">
+<h3>Generated groups</h3>
+
+<form (submit)="save()">
+	<button type="submit">Save the generated groups</button>
+	<strong>This will delete the existing groups!</strong>
+</form>
+
+
+<em>{{ groups.length }} groups of size {{ groupSize }}</em>
+<strong *ngIf="!evenGroups">(Uneven!)</strong>
+
+<table *ngFor="#group of groups">
+	<caption>{{ group.name }} ({{ group.seed }})</caption>
+	<tr>
+		<th>Team name</th>
+		<th>Seed</th>
+	</tr>
+	<tr *ngFor="#team of group.teams">
+		<td>{{ team.name }}</td>
+		<td>({{ team.seed }})</td>
+	</tr>
+</table>
+</div>

@@ -6,22 +6,23 @@ import {Router, RouteConfig, LocationStrategy, HashLocationStrategy, ROUTER_PROV
 
 import {Api} from './common/api';
 import {Home} from './home/home';
-import {PlayersList, PlayersAdd} from './players/players';
+import {Groups} from './groups/groups';
+import {Teams} from './teams/teams';
 
 @Component({
 	selector: 'lr-app',
 	directives: [ROUTER_DIRECTIVES],
-	template: `
+	template: `<strong>Module:</strong>
 		<a [routerLink]="['./Home']">Home</a> -
-		<a [routerLink]="['./Players']">Players</a> -
-		<a [routerLink]="['./AddPlayer']">Add</a>
+		<a [routerLink]="['./Teams/List']">Teams</a> -
+		<a [routerLink]="['./Groups/List']">Groups</a>
 		<br/><router-outlet></router-outlet>
-		<br/>after`
+	`
 })
 @RouteConfig([
 	{ path: '/', component: Home, as: 'Home' },
-	{ path: '/players', component: PlayersList, as: 'Players' },
-	{ path: '/players/new', component: PlayersAdd, as: 'AddPlayer' },
+	{ path: '/teams/...', component: Teams, as: 'Teams' },
+	{ path: '/groups/...', component: Groups, as: 'Groups' }
 ])
 class App {}
 
