@@ -5,10 +5,17 @@ import {Team} from '../teams/service';
 
 export class Group
 {
-	_id: number;
+	_id;
 	name: string;
 	seed: number;
 	teams: Array<Team>;
+
+	constructor()
+	{
+		this.name = '';
+		this.seed = 0;
+		this.teams = [];
+	}
 }
 
 @Component({})
@@ -25,7 +32,12 @@ export class GroupService
 	{
 		return this.api.get('group');
 	}
-	
+
+	getOne(id: string)
+	{
+		return this.api.get('group/' + id);
+	}
+
 	private getIds(teams:Array<Team>)
 	{
 		let teamIds: Array<string> = [];
@@ -34,26 +46,40 @@ export class GroupService
 		});
 		return teamIds;
 	}
-	
-	add(name: string, teams: Array<Team>)
+
+	add(g: Group)
 	{
 		let group = {
 			'name': name,
-			'teams': this.getIds(teams)
+			'teamIds': this.getIds(g.teams)
 		};
 		return this.api.post('group', JSON.stringify(group));
 	}
-	
+
 	addMany(groups: Array<Group>)
 	{
 		let g = [];
 		groups.forEach(group => {
-			let teamIds = this.getIds(group.teams); 
+			let teamIds = this.getIds(group.teams);
 			g.push({
 				'name': group.name,
-				'teams': teamIds
+				'teamIds': teamIds
 			});
 		});
 		return this.api.post('groups', JSON.stringify({'groups': g}));
+	}
+
+	update(g: Group)
+	{
+		let group = {
+			'name': g.name,
+			'teamIds': this.getIds(g.teams)
+		};
+		return this.api.put('group/' + g._id, JSON.stringify(group));
+	}
+
+	delete(group: Group)
+	{
+		return this.api.delete('group/' + group._id);
 	}
 }

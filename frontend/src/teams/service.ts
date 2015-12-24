@@ -28,17 +28,19 @@ export class TeamService
 		this.api = api;
 	}
 
-	get()
+	get(withPlayers: boolean = true)
 	{
-		return this.api.get('team');
+		let url = 'team';
+		if (!withPlayers) url += '?noplayers';
+		return this.api.get(url);
 	}
-	
+
 	add(name: string, players: Array<string>)
 	{
 		var t: any = {};
 		t.name = name;
 		t.players = players;
-		
+
 		return this.api.post('team', JSON.stringify(t));
 	}
 }

@@ -1,7 +1,11 @@
 <h3>Groups list</h3>
 
 <table *ngFor="#group of groups">
-	<caption><a href="#">{{ group.name }}</a> ({{ group.seed }}) [<a href="#">Delete</a>]</caption>
+	<caption>
+		<a [routerLink]="['View', {id:group._id}]">{{ group.name }}</a>
+		({{ group.seed }})
+		<button (click)="delete(group)">Delete</button>
+	</caption>
 	<tr>
 		<th>Team name</th>
 		<th>Seed</th>

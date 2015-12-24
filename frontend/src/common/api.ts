@@ -11,13 +11,13 @@ export class Api
 	{
 		this.http = http;
 	}
-	
+
 	getApiRoot(): string
 	{
 		return 'http://localhost:8081/rest/';
 	}
 
-	get(url: string, options?: RequestOptionsArgs): Observable<Response> 
+	get(url: string, options?: RequestOptionsArgs): Observable<Response>
 	{
 		url = this.getApiRoot() + url;
 		return this.http.get(url, options);
@@ -27,5 +27,17 @@ export class Api
 	{
 		url = this.getApiRoot() + url;
 		return this.http.post(url, body, options);
+	}
+
+	put(url: string, body: string, options?: RequestOptionsArgs): Observable<Response>
+	{
+		url = this.getApiRoot() + url;
+		return this.http.put(url, body, options);
+	}
+
+	delete(url: string, options?: RequestOptionsArgs): Observable<Response>
+	{
+		url = this.getApiRoot() + url;
+		return this.http.delete(url, options);
 	}
 }

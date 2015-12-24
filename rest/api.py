@@ -1,7 +1,7 @@
-import bson, bson.json_util as json
+from bson.objectid import ObjectId
+from . import mson as json
 from bottle import Bottle, request, response, abort, HTTPResponse
 from pymongo import MongoClient
-from pymongo.errors import DuplicateKeyError
 import cassiopeia.riotapi
 from cassiopeia.type.api.exception import APIError
 from cassiopeia.type.core.common import LoadPolicy
@@ -57,6 +57,9 @@ def calculate_score(tier, division, points):
 @api.route('/rest/team', method='GET')
 def get_team():
     teams = list(db['team'].find())
+    if 'noplayers' in request.query:
+        for t in teams:
+            del t['players']
     return send_response(200, {'results': teams})
 
 
@@ -107,8 +110,7 @@ def post_team():
 
         team['seed'] = round(team['seed'] / len(team['players']))
         _id = db['team'].insert_one(team).inserted_id
-    except (ValueError, KeyError, TypeError, AttributeError, APIError) as e:
-        raise e
+    except (ValueError, KeyError, TypeError, AttributeError, APIError):
         return send_response(400, 'Invalid input')
     return send_response(201, {'id': _id})
 
@@ -128,11 +130,30 @@ def get_group():
     return send_response(200, {'results': groups})
 
 
+@api.route('/rest/group/<gid>', method='GET')
+def get_group_one(gid):
+    try:
+        gid = ObjectId(gid)
+    except Exception:
+        return send_response(400, 'Invalid ID')
+    group = db['group'].find_one({'_id': gid})
+    if group is None:
+        return send_response(404, 'Group not found')
+    criteria = {'$or': [{'_id': i} for i in group['teams']]}
+    teams = list(db['team'].find(criteria, {'players': 0}))
+    # We want to keep the same order
+    for i in range(len(teams)):
+        id = group['teams'][i]
+        team = next(filter(lambda x: x['_id'] == id, teams))
+        group['teams'][i] = team
+    return send_response(200, group)
+
+
 def validate_group(o):
-    if len(o['teams']) == 0:
+    if len(o['teamIds']) == 0:
         return send_response(400, 'The list of teams cannot be empty')
-    criteria = {'$or': [{'_id': i} for i in o['teams']]}
-    if db['team'].find(criteria).count() != len(o['teams']):
+    criteria = {'$or': [{'_id': i} for i in o['teamIds']]}
+    if db['team'].find(criteria).count() != len(o['teamIds']):
         return send_response(400, 'Unknown team')
     return None
 
@@ -151,8 +172,8 @@ def post_group():
             return r
 
         teams = []
-        for t in o['teams']:
-            teams.append(bson.ObjectId(t))
+        for t in o['teamIds']:
+            teams.append(ObjectId(t))
 
         group = {
             'name': str(o['name']),
@@ -179,8 +200,8 @@ def post_group():
             r = validate_group(o)
 
             teams = []
-            for t in o['teams']:
-                teams.append(bson.ObjectId(t))
+            for t in o['teamIds']:
+                teams.append(ObjectId(t))
             o['teams'] = teams
 
             if r is not None:
@@ -197,6 +218,61 @@ def post_group():
         return send_response(201, {'ids': ids})
     except (TypeError, KeyError):
         return send_response(400, 'Invalid input')
+
+
+@api.route('/rest/group/<gid>', method='OPTIONS')
+def delete_group_options(gid):
+    r = HTTPResponse(status=200)
+    r.add_header('Access-Control-Allow-Origin', '*')
+    r.add_header('Access-Control-Allow-Methods', 'GET, DELETE, PUT')
+    return r
+
+
+@api.route('/rest/group/<gid>', method='PUT')
+def put_group(gid):
+    try:
+        data = request.body.read().decode('utf-8')
+        o = json.loads(data)
+        gid = ObjectId(gid)
+    except Exception:
+        return send_response(400, 'Invalid JSON')
+
+    try:
+        r = validate_group(o)
+        if r is not None:
+            return r
+
+        teams = []
+        for t in o['teamIds']:
+            teams.append(ObjectId(t))
+
+        group = {
+            'name': str(o['name']),
+            'teams': teams
+        }
+
+        r = db['group'].update_one({'_id': gid}, {'$set': group})
+        if r.matched_count == 0:
+            return send_response(404, 'Group not found')
+        return send_response(204 - 4)
+    except (TypeError, KeyError) as e:
+        raise e
+        return send_response(400, 'Invalid input')
+
+
+@api.route('/rest/group/<gid>', method='DELETE')
+def delete_group(gid):
+    try:
+        gid = ObjectId(gid)
+    except Exception:
+        return send_response(400, 'Invalid ID')
+
+    criteria = {'_id': gid}
+    r = db['group'].delete_one(criteria)
+    if r.deleted_count == 0:
+        return send_response(404, 'Group not found')
+    return send_response(204-4)
+
 
 """
 GET /matches/?filter={"ongoing":true}

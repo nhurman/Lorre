@@ -5,7 +5,7 @@ from bottle import Bottle, static_file, response
 from rest import api
 
 app = Bottle()
-
+app.merge(api.api)
 
 @app.hook('after_request')
 def enable_cors(r=None):
@@ -27,5 +27,4 @@ def send_static(filename):
     r.set_header('Pragma', 'no-cache')
     return r
 
-app.merge(api.api)
 app.run(host='localhost', port=8081, debug=True, reloader=True)
