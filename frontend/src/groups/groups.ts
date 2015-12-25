@@ -4,6 +4,7 @@ import {COMMON_DIRECTIVES} from 'angular2/common';
 
 import {Group, GroupService} from './service';
 import {Team, TeamService} from '../teams/service';
+import {MessageEmitter} from '../common/message'
 
 @Component({
 	template: require('./list.html'),
@@ -14,10 +15,12 @@ export class GroupsList
 {
 	service: GroupService;
 	groups: Array<Group>;
+	msg: MessageEmitter;
 
-	constructor(service: GroupService)
+	constructor(service: GroupService, msg: MessageEmitter)
 	{
 		this.service = service;
+		this.msg = msg;
 		this.groups = [];
 		service.get().subscribe(d => this.dataReady(d.json().results));
 	}
@@ -34,7 +37,10 @@ export class GroupsList
 
 	delete(group: Group)
 	{
-		this.service.delete(group).subscribe(() => this.groups.splice(this.groups.indexOf(group), 1));
+		this.service.delete(group).subscribe(() => {
+			this.groups.splice(this.groups.indexOf(group), 1);
+			this.msg.success('Group ' + group.name + ' deleted');
+		});
 	}
 }
 
@@ -50,14 +56,18 @@ export class GroupsAdd
 	availableTeams: Array<Team>;
 	groupService: GroupService;
 	teamService: TeamService;
+	msg: MessageEmitter;
 
-	constructor(service: GroupService, teamService: TeamService)
+	constructor(service: GroupService, teamService: TeamService, msg: MessageEmitter)
 	{
 		this.groupService = service;
 		this.teamService = teamService;
+		this.msg = msg;
 		this.group = new Group();
 		this.availableTeams = [];
-		this.teamService.get(false).subscribe(d => { this.availableTeams = d.json().results.sort((a, b) => a.seed < b.seed ? 1 : -1); this.filterTeams(); });
+		this.teamService.get(false).subscribe(
+			d => { this.availableTeams = d.json().results.sort((a, b) => a.seed < b.seed ? 1 : -1); this.filterTeams(); },
+			e => this.msg.error('Could not get teams list'));
 	}
 
 	filterTeams()
@@ -78,7 +88,7 @@ export class GroupsAdd
 	{
 		this.group.name = name;
 		this.group.teams = teams;
-		this.groupService.add(this.group).subscribe();
+		this.groupService.add(this.group).subscribe(n => this.msg.success('Group ' + name + ' added'));
 	}
 
 	addTeam(team: Team)
@@ -99,8 +109,11 @@ export class GroupsAdd
 
 		let i = this.group.teams.indexOf(team);
 		this.group.teams.splice(i, 1);
-		this.availableTeams.push(team);
-		this.availableTeams.sort((a, b) => a.seed < b.seed ? 1 : -1);
+		if (team._id)
+		{
+			this.availableTeams.push(team);
+			this.availableTeams.sort((a, b) => a.seed < b.seed ? 1 : -1);
+		}
 	}
 }
 
@@ -112,9 +125,9 @@ export class GroupsAdd
 })
 export class GroupsView extends GroupsAdd
 {
-	constructor(service: GroupService, teamService: TeamService, params: RouteParams)
+	constructor(service: GroupService, teamService: TeamService, msg: MessageEmitter, params: RouteParams)
 	{
-		super(service, teamService);
+		super(service, teamService, msg);
 		this.groupService.getOne(params.get('id')).subscribe(d => { this.group = d.json(); this.filterTeams(); });
 	}
 
@@ -122,7 +135,7 @@ export class GroupsView extends GroupsAdd
 	{
 		this.group.name = name;
 		this.group.teams = teams;
-		this.groupService.update(this.group).subscribe();
+		this.groupService.update(this.group).subscribe(n => this.msg.success('Group ' + name + ' saved'));
 	}
 }
 
@@ -140,11 +153,13 @@ export class GroupsGenerate
 	divisors: Array<number>;
 	service: GroupService;
 	teamService: TeamService;
+	msg: MessageEmitter;
 
-	constructor(service: GroupService, teamService: TeamService)
+	constructor(service: GroupService, teamService: TeamService, msg: MessageEmitter)
 	{
 		this.service = service;
 		this.teamService = teamService;
+		this.msg = msg;
 		this.teams = [];
 		this.groups = [];
 		this.groupSize = 0;
@@ -205,7 +220,7 @@ export class GroupsGenerate
 
 	save()
 	{
-		this.service.addMany(this.groups).subscribe();
+		this.service.addMany(this.groups).subscribe(n => this.msg.success('Groups saved'));
 	}
 }
 

@@ -1,8 +1,19 @@
 <h3>Teams list</h3>
 
+<button (click)="refreshAll(teams)">Refresh all teams</button> (This will take a long time!)
+
 <div *ngFor="#team of teams">
-	<h5>{{ team.name }} ({{ team.seed }})</h5>
+	<h5>
+		<a [routerLink]="['View', {id:team._id}]">{{ team.name }}</a>
+		({{ team.seed }})
+		<button (click)="delete(team)">Delete</button>
+		<button (click)="refresh(team)">Refresh</button>
+	</h5>
 	<ul>
-		<li *ngFor="#player of team.players">{{ player.name }} [{{player.tier}} {{player.division}} {{player.points}} LP]</li>
+		<li *ngFor="#player of team.players">
+			{{ player.name }}
+			<span *ngIf="player.tier">[{{player.tier}} {{player.division}} {{player.points}} LP]</span>
+			<span *ngIf="!player.tier">[Unranked]</span>
+		</li>
 	</ul>
 </div>

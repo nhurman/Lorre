@@ -50,7 +50,7 @@ export class GroupService
 	add(g: Group)
 	{
 		let group = {
-			'name': name,
+			'name': g.name,
 			'teamIds': this.getIds(g.teams)
 		};
 		return this.api.post('group', JSON.stringify(group));

@@ -4,5 +4,6 @@ backend/replays
 frontend/node_modules
 frontend/app/*.js
 frontend/app/*.js.map
+frontend/js
 .idea
 *.iml

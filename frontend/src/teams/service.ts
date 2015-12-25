@@ -16,6 +16,13 @@ export class Team
 	name: string;
 	seed: number;
 	players: Array<Player>;
+
+	constructor()
+	{
+		this.name = '';
+		this.seed = 0;
+		this.players = [];
+	}
 }
 
 @Component({})
@@ -28,11 +35,16 @@ export class TeamService
 		this.api = api;
 	}
 
-	get(withPlayers: boolean = true)
+	get(withPlayers: boolean = false)
 	{
 		let url = 'team';
 		if (!withPlayers) url += '?noplayers';
 		return this.api.get(url);
+	}
+
+	getOne(id: string)
+	{
+		return this.api.get('team/' + id);
 	}
 
 	add(name: string, players: Array<string>)
@@ -42,5 +54,24 @@ export class TeamService
 		t.players = players;
 
 		return this.api.post('team', JSON.stringify(t));
+	}
+
+	update(id, name: string, players: Array<string>)
+	{
+		var t: any = {};
+		t.name = name;
+		t.players = players;
+
+		return this.api.put('team/' + id, JSON.stringify(t));
+	}
+
+	delete(team: Team)
+	{
+		return this.api.delete('team/' + team._id);
+	}
+
+	refresh(team: Team)
+	{
+		return this.api.patch('team/' + team._id, '{}');
 	}
 }
