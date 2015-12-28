@@ -366,35 +366,3 @@ def delete_group(gid):
         return send_response(404, 'Group not found')
     return send_response(204-4)
 
-
-"""
-GET /matches/?filter={"ongoing":true}
-[{
-    _id: 123,
-    team1: {_id: 123, name: 'PATRON GAMING'},
-    team2: {_id: 123, name: 'JAMBONNEAUX'},
-    status: "game_started"
-    duration: 120,
-}]
-
-GET /matches/123
-{
-    _id: 123,
-    team1: {_id: 123, name: 'PATRON GAMING'},
-    team2: {_id: 123, name: 'JAMBONNEAUX'},
-    status: "game_started"
-    duration: 120,
-}
-"""
-
-"""
-
-def create_tournament():
-    provider_id = api.register_provider(callback_url='http://test/callback', region='euw')
-    tournament_id = api.register_tournament(provider_id)
-    tournament_codes = []
-    tournament_codes.add(api.request_code())
-    tournament_codes.add(api.request_code())
-    tournament_codes.add(api.request_code())
-    tournament_codes.add(api.request_code())
-"""
